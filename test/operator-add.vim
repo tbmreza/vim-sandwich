@@ -4755,6 +4755,7 @@ function! s:suite.linewise_n_option_linewise() abort "{{{
   let g:operator#sandwich#recipes = [
         \   {'buns': ['(', ')'], 'linewise': 0, 'input':['0']},
         \   {'buns': ['(', ')'], 'linewise': 1, 'input':['1']},
+        \   {'buns': ['(', ')'], 'linewise': 3, 'input':['3']},
         \ ]
 
   """"" linewise
@@ -4796,6 +4797,69 @@ function! s:suite.linewise_n_option_linewise() abort "{{{
   call setline('.', 'foo')
   normal 0saViw0
   call g:assert.equals(getline(1), '(foo)', 'failed at #4')
+
+  %delete
+
+  """ special case
+  " #5
+  call setline(1, ['foo[', 'bar', ']'])
+  normal 2GsaViw3
+  call g:assert.equals(getline(1), 'foo[(', 'failed at #5')
+  call g:assert.equals(getline(2), 'bar',   'failed at #5')
+  call g:assert.equals(getline(3), ')]',    'failed at #5')
+  call g:assert.equals(getpos('.'),  [0, 2, 1, 0], 'failed at #5')
+  call g:assert.equals(getpos("'["), [0, 1, 5, 0], 'failed at #5')
+  call g:assert.equals(getpos("']"), [0, 3, 2, 0], 'failed at #5')
+
+  %delete
+
+  " #6
+  call setline(1, ['foo'])
+  normal 1GsaViw3
+  call g:assert.equals(getline(1), '(',   'failed at #6')
+  call g:assert.equals(getline(2), 'foo', 'failed at #6')
+  call g:assert.equals(getline(3), ')',   'failed at #6')
+  call g:assert.equals(getpos('.'),  [0, 2, 1, 0], 'failed at #5')
+  call g:assert.equals(getpos("'["), [0, 1, 1, 0], 'failed at #6')
+  call g:assert.equals(getpos("']"), [0, 3, 2, 0], 'failed at #6')
+
+  %delete
+
+  " #7
+  call setline(1, ['foo', 'bar'])
+  normal 1GsaViw3
+  call g:assert.equals(getline(1), '(',    'failed at #7')
+  call g:assert.equals(getline(2), 'foo',  'failed at #7')
+  call g:assert.equals(getline(3), ')bar', 'failed at #7')
+  call g:assert.equals(getpos('.'),  [0, 2, 1, 0], 'failed at #5')
+  call g:assert.equals(getpos("'["), [0, 1, 1, 0], 'failed at #7')
+  call g:assert.equals(getpos("']"), [0, 3, 2, 0], 'failed at #7')
+
+  %delete
+
+  " #8
+  call setline(1, ['foo', 'bar'])
+  normal 2GsaViw3
+  call g:assert.equals(getline(1), 'foo(', 'failed at #8')
+  call g:assert.equals(getline(2), 'bar',  'failed at #8')
+  call g:assert.equals(getline(3), ')',    'failed at #8')
+  call g:assert.equals(getpos('.'),  [0, 2, 1, 0], 'failed at #5')
+  call g:assert.equals(getpos("'["), [0, 1, 4, 0], 'failed at #8')
+  call g:assert.equals(getpos("']"), [0, 3, 2, 0], 'failed at #8')
+
+  %delete
+
+  " #9
+  call setline(1, ['  foo', '    bar', '  baz'])
+  normal ggjsaViw3
+  call g:assert.equals(getline(1), '  foo(',  'failed at #9')
+  call g:assert.equals(getline(2), '    bar', 'failed at #9')
+  call g:assert.equals(getline(3), '  )baz',  'failed at #9')
+  call g:assert.equals(getpos('.'),  [0, 2, 1, 0], 'failed at #5')
+  call g:assert.equals(getpos("'["), [0, 1, 6, 0], 'failed at #9')
+  call g:assert.equals(getpos("']"), [0, 3, 4, 0], 'failed at #9')
+
+  %delete
 endfunction
 "}}}
 function! s:suite.linewise_n_option_autoindent() abort  "{{{
@@ -6566,6 +6630,7 @@ function! s:suite.linewise_x_option_linewise() abort "{{{
   let g:operator#sandwich#recipes = [
         \   {'buns': ['(', ')'], 'linewise': 0, 'input':['0']},
         \   {'buns': ['(', ')'], 'linewise': 1, 'input':['1']},
+        \   {'buns': ['(', ')'], 'linewise': 3, 'input':['3']},
         \ ]
 
   """"" linewise
@@ -6607,6 +6672,69 @@ function! s:suite.linewise_x_option_linewise() abort "{{{
   call setline('.', 'foo')
   normal Vsa0
   call g:assert.equals(getline(1), '(foo)', 'failed at #4')
+
+  %delete
+
+  """ special case
+  " #5
+  call setline(1, ['foo[', 'bar', ']'])
+  normal ggjVsa3
+  call g:assert.equals(getline(1), 'foo[(', 'failed at #5')
+  call g:assert.equals(getline(2), 'bar',   'failed at #5')
+  call g:assert.equals(getline(3), ')]',    'failed at #5')
+  call g:assert.equals(getpos('.'),  [0, 2, 1, 0], 'failed at #5')
+  call g:assert.equals(getpos("'["), [0, 1, 5, 0], 'failed at #5')
+  call g:assert.equals(getpos("']"), [0, 3, 2, 0], 'failed at #5')
+
+  %delete
+
+  " #6
+  call setline(1, ['foo'])
+  normal ggVsa3
+  call g:assert.equals(getline(1), '(',   'failed at #6')
+  call g:assert.equals(getline(2), 'foo', 'failed at #6')
+  call g:assert.equals(getline(3), ')',   'failed at #6')
+  call g:assert.equals(getpos('.'),  [0, 2, 1, 0], 'failed at #5')
+  call g:assert.equals(getpos("'["), [0, 1, 1, 0], 'failed at #6')
+  call g:assert.equals(getpos("']"), [0, 3, 2, 0], 'failed at #6')
+
+  %delete
+
+  " #7
+  call setline(1, ['foo', 'bar'])
+  normal ggVsa3
+  call g:assert.equals(getline(1), '(',    'failed at #7')
+  call g:assert.equals(getline(2), 'foo',  'failed at #7')
+  call g:assert.equals(getline(3), ')bar', 'failed at #7')
+  call g:assert.equals(getpos('.'),  [0, 2, 1, 0], 'failed at #5')
+  call g:assert.equals(getpos("'["), [0, 1, 1, 0], 'failed at #7')
+  call g:assert.equals(getpos("']"), [0, 3, 2, 0], 'failed at #7')
+
+  %delete
+
+  " #8
+  call setline(1, ['foo', 'bar'])
+  normal ggjVsa3
+  call g:assert.equals(getline(1), 'foo(', 'failed at #8')
+  call g:assert.equals(getline(2), 'bar',  'failed at #8')
+  call g:assert.equals(getline(3), ')',    'failed at #8')
+  call g:assert.equals(getpos('.'),  [0, 2, 1, 0], 'failed at #5')
+  call g:assert.equals(getpos("'["), [0, 1, 4, 0], 'failed at #8')
+  call g:assert.equals(getpos("']"), [0, 3, 2, 0], 'failed at #8')
+
+  %delete
+
+  " #9
+  call setline(1, ['  foo', '    bar', '  baz'])
+  normal ggjVsa3
+  call g:assert.equals(getline(1), '  foo(',  'failed at #9')
+  call g:assert.equals(getline(2), '    bar', 'failed at #9')
+  call g:assert.equals(getline(3), '  )baz',  'failed at #9')
+  call g:assert.equals(getpos('.'),  [0, 2, 1, 0], 'failed at #5')
+  call g:assert.equals(getpos("'["), [0, 1, 6, 0], 'failed at #9')
+  call g:assert.equals(getpos("']"), [0, 3, 4, 0], 'failed at #9')
+
+  %delete
 endfunction
 "}}}
 function! s:suite.linewise_x_option_autoindent() abort  "{{{
