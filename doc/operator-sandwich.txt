@@ -1,5 +1,5 @@
 *operator-sandwich.txt*	The operator plugin to edit sandwiched textobjects.
-						Last change:02-Mar-2019.
+						Last change:18-Sep-2019.
 
 Author  : machakann <mckn{at}outlook.jp>
 License : NYSL license
@@ -1082,6 +1082,16 @@ linewise
 	" foo   --->   (
 	               foo
 	               )
+<
+	If this option is 3, add parentheses at the end of the previous line
+	and at the beginning of the next line. Typically, setting the option
+	to 3 in line-wise operation would be useful.
+>
+	call operator#sandwich#set('add', 'line', 'linewise', 3)
+	" Press jVsa(
+	" foo   --->   foo(
+	  bar          bar
+	  baz          )baz
 <
 	For the case of deleting, if there are nothing other than white spaces
 	and breaking after deleting, delete the lines.

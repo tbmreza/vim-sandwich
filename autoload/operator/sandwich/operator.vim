@@ -249,7 +249,8 @@ function! s:operator.add_once(i, recipe) dict abort  "{{{
   let buns = s:get_buns(a:recipe, self.opt.of('expr'), self.opt.of('listexpr'))
   let undojoin = a:i == 0 || self.state == 0 ? 0 : 1
   let modified = 0
-  if buns[0] !=# '' || buns[1] !=# '' || self.opt.of('linewise')
+  let opt_linewise = self.opt.of('linewise')
+  if buns[0] !=# '' || buns[1] !=# '' || opt_linewise == 1 || opt_linewise == 2
     for j in range(self.n)
       let stuff = self.basket[j]
       if stuff.active
@@ -398,7 +399,8 @@ function! s:operator.skip_space(i) dict abort "{{{
     endfor
 
     " for cursor positions
-    if !opt.of('linewise')
+    let opt_linewise = opt.of('linewise')
+    if !(opt_linewise == 1 || opt_linewise == 2)
       let top_stuff = self.basket[self.n-1]
       let bot_stuff = self.basket[0]
       let self.cursor.inner_head = deepcopy(top_stuff.edges.head)

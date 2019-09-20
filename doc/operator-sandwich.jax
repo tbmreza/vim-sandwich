@@ -1,5 +1,5 @@
 *operator-sandwich.jax*	『挟まれた』テキストを編集する。
-						Last change:02-Mar-2019.
+						Last change:18-Sep-2019.
 
 書いた人   : machakann <mckn{at}outlook.jp>
 ライセンス : NYSL license
@@ -1068,6 +1068,15 @@ linewise
 	" foo   --->   (
 	               foo
 	               )
+<
+	このオプションを 3 に設定した場合、括弧を前の行の最後尾と次の行の最初
+	にそれぞれ追加します。行指向の場合に設定するのが有用でしょう。
+>
+	call operator#sandwich#set('add', 'line', 'linewise', 3)
+	" Press jVsa(
+	" foo   --->   foo(
+	  bar          bar
+	  baz          )baz
 <
 	文字列を削除する場合は、文字列削除後にその行に空白文字以外に残っていな
 	ければ行ごと削除します。

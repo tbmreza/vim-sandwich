@@ -284,7 +284,8 @@ function! s:Indent(pos, opt) abort "{{{
     let indent.linehead = s:TRUE
   endif
 
-  if a:opt.of('linewise') && a:opt.of('autoindent') == 4
+  let opt_linewise = a:opt.of('linewise')
+  if opt_linewise > 0 && a:opt.of('autoindent') == 4
     let indent.savedstr = indent.str
   endif
   return indent
@@ -383,32 +384,54 @@ endfunction
 "}}}
 function! s:add_former(buns, pos, opt, ...) abort  "{{{
   let undojoin_cmd = get(a:000, 0, 0) ? 'undojoin | ' : ''
-  let indent = s:Indent(a:pos, a:opt)
-  let opt_linewise  = a:opt.of('linewise')
-  if opt_linewise
+  let pos = copy(a:pos)
+  let linewise  = a:opt.of('linewise')
+  if linewise == 1 || linewise == 2 || (linewise == 3 && pos[1] == 1)
     let startinsert = a:opt.of('noremap') ? 'normal! O' : "normal \<Plug>(sandwich-O)"
-    let insertion = indent.savedstr . a:buns[0]
+    let linewise = 1
+  elseif linewise == 3
+    let prevline = pos[1] - 1
+    let pos = [0, prevline, col([prevline, '$']), 0]
+    let startinsert = a:opt.of('noremap') ? 'normal! i' : "normal \<Plug>(sandwich-i)"
+    let linewise = 0
   else
     let startinsert = a:opt.of('noremap') ? 'normal! i' : "normal \<Plug>(sandwich-i)"
+    let linewise = 0
+  endif
+  let indent = s:Indent(pos, a:opt)
+  if linewise
+    let insertion = indent.savedstr . a:buns[0]
+  else
     let insertion = a:buns[0]
   endif
-  call s:add_portion(insertion, a:pos, undojoin_cmd, startinsert)
-  return [opt_linewise, indent.diff(a:buns[0]), getpos("'["), getpos("']")]
+  call s:add_portion(insertion, pos, undojoin_cmd, startinsert)
+  return [linewise, indent.diff(a:buns[0]), getpos("'["), getpos("']")]
 endfunction
 "}}}
 function! s:add_latter(buns, pos, opt) abort  "{{{
   let undojoin_cmd = ''
-  let indent = s:Indent(a:pos, a:opt)
-  let opt_linewise = a:opt.of('linewise')
-  if opt_linewise
+  let pos = copy(a:pos)
+  let linewise = a:opt.of('linewise')
+  if linewise == 1 || linewise == 2 || (linewise == 3 && pos[1] == line('$'))
     let startinsert = a:opt.of('noremap') ? 'normal! o' : "normal \<Plug>(sandwich-o)"
-    let insertion = indent.savedstr . a:buns[1]
+    let linewise = 1
+  elseif linewise == 3
+    let nextline = pos[1] + 1
+    let pos = [0, nextline, indent(nextline) + 1, 0]
+    let startinsert = a:opt.of('noremap') ? 'normal! i' : "normal \<Plug>(sandwich-i)"
+    let linewise = 0
   else
     let startinsert = a:opt.of('noremap') ? 'normal! i' : "normal \<Plug>(sandwich-i)"
+    let linewise = 0
+  endif
+  let indent = s:Indent(pos, a:opt)
+  if linewise
+    let insertion = indent.savedstr . a:buns[1]
+  else
     let insertion = a:buns[1]
   endif
-  call s:add_portion(insertion, a:pos, undojoin_cmd, startinsert)
-  return [opt_linewise, indent.diff(a:buns[1]), getpos("'["), getpos("']")]
+  call s:add_portion(insertion, pos, undojoin_cmd, startinsert)
+  return [linewise, indent.diff(a:buns[1]), getpos("'["), getpos("']")]
 endfunction
 "}}}
 function! s:add_portion(bun, pos, undojoin_cmd, startinsert) abort "{{{
@@ -633,19 +656,19 @@ function! s:shift_for_replace(shifted_pos, target, addition, deletion, indent, i
     endif
   else
     call s:pull2(a:shifted_pos, a:target, a:deletion, a:is_linewise)
-    if a:is_linewise[1]
+    if a:is_linewise[1] == 1 || a:is_linewise[1] == 2
       let a:target.head2[1] -= 1
     endif
     call s:push2(a:shifted_pos, a:target, a:addition, a:indent, a:is_linewise)
-    if a:is_linewise[1]
+    if a:is_linewise[1] == 1 || a:is_linewise[1] == 2
       let a:target.head2[1] += 1
     endif
     call s:pull1(a:shifted_pos, a:target, a:deletion, a:is_linewise)
-    if a:is_linewise[0]
+    if a:is_linewise[0] == 1 || a:is_linewise[0] == 2
       let a:target.head1[1] -= 1
     endif
     call s:push1(a:shifted_pos, a:target, a:addition, a:indent, a:is_linewise)
-    if a:is_linewise[0]
+    if a:is_linewise[0] == 1 || a:is_linewise[0] == 2
       let a:target.head1[1] += 1
     endif
   endif
@@ -669,7 +692,9 @@ function! s:push1(shifted_pos, target, addition, indent, is_linewise) abort  "{{
       let shift[1] += 1
     endif
 
-    if s:is_equal_or_ahead(a:shifted_pos, head) || (a:is_linewise[0] && a:shifted_pos[1] == head[1])
+    if s:is_equal_or_ahead(a:shifted_pos, head)
+      call s:push(shift, a:shifted_pos, head, a:addition[0], a:indent[0], a:is_linewise[0])
+    elseif a:is_linewise[0] && a:shifted_pos[1] == head[1]
       call s:push(shift, a:shifted_pos, head, a:addition[0], a:indent[0], a:is_linewise[0])
     endif
     let a:shifted_pos[1:2] += shift[1:2]
@@ -737,7 +762,7 @@ function! s:pull1(shifted_pos, target, deletion, is_linewise) abort "{{{
     let a:shifted_pos[1] += shift[1]
 
     " the case for linewise action
-    if a:is_linewise[0]
+    if a:is_linewise[0] == 1 || a:is_linewise[0] == 2
       if a:shifted_pos[1] == head[1]
         " col
         let a:shifted_pos[2] = 0
@@ -787,7 +812,7 @@ function! s:pull2(shifted_pos, target, deletion, is_linewise) abort "{{{
     let a:shifted_pos[1:2] += shift[1:2]
 
     " the case for linewise action
-    if a:is_linewise[1]
+    if a:is_linewise[1] == 1 || a:is_linewise[1] == 2
       if a:shifted_pos[1] == head[1]
         " col
         let a:shifted_pos[2]  = s:constants('colmax')

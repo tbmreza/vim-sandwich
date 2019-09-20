@@ -62,7 +62,7 @@ function! s:highlight.order(target, linewise) dict abort  "{{{
   let order_list = []
   for [head, tail, linewise] in [[a:target.head1, a:target.tail1, a:linewise[0]],
                               \  [a:target.head2, a:target.tail2, a:linewise[1]]]
-    if linewise
+    if linewise == 1 || linewise == 2
       call s:highlight_order_linewise(order_list, order, head, tail)
     else
       call s:highlight_order_charwise(order_list, order, head, tail)
