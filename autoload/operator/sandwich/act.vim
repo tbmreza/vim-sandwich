@@ -49,20 +49,33 @@ function! s:act.add_pair(buns, stuff, undojoin) dict abort "{{{
   let modmark = self.modmark
   let opt     = self.opt
   let indent  = [0, 0]
-  let is_linewise = [0, 0]
+  let opt_linewise = opt.of('linewise')
+  let linewise = [opt_linewise, opt_linewise]
 
   if s:is_valid_4pos(target) && s:is_equal_or_ahead(target.head2, target.head1)
     if target.head2[2] != col([target.head2[1], '$'])
       let target.head2[0:3] = s:get_right_pos(target.head2)
+    endif
+    if opt_linewise == 3
+      if target.head1[1] != 1
+        let prevline = target.head1[1] - 1
+        let target.head1[1:2] = [prevline, col([prevline, '$'])]
+        let linewise[0] = 0
+      endif
+      if target.head2[1] != line('$')
+        let nextline = target.head2[1] + 1
+        let target.head2[1:2] = [nextline, indent(nextline) + 1]
+        let linewise[1] = 0
+      endif
     endif
 
     let indentopt = s:set_indent(opt)
     let messenger = sandwich#messenger#get()
     try
       let pos = target.head1
-      let [is_linewise[0], indent[0], head1, tail1] = s:add_former(a:buns, pos, opt, a:undojoin)
-      let pos = s:push1(copy(target.head2), target, a:buns, indent, is_linewise)
-      let [is_linewise[1], indent[1], head2, tail2] = s:add_latter(a:buns, pos, opt)
+      let [linewise[0], indent[0], head1, tail1] = s:add_former(a:buns, pos, linewise[0], opt, a:undojoin)
+      let pos = s:push1(copy(target.head2), target, a:buns, indent, linewise)
+      let [linewise[1], indent[1], head2, tail2] = s:add_latter(a:buns, pos, linewise[1], opt)
     catch /^Vim\%((\a\+)\)\=:E21/
       call messenger.notice.queue(['Cannot make changes to read-only buffer.', 'WarningMsg'])
       throw 'OperatorSandwichError:ReadOnly'
@@ -72,13 +85,13 @@ function! s:act.add_pair(buns, stuff, undojoin) dict abort "{{{
     let [mod_head, mod_tail] = s:execute_command(head1, tail2, opt.of('command'))
 
     if opt.of('highlight', '') >= 3
-      call map(self.added, 's:shift_added("s:shift_for_add", v:val, target, a:buns, indent, is_linewise)')
+      call map(self.added, 's:shift_added("s:shift_for_add", v:val, target, a:buns, indent, linewise)')
       call add(self.added, {
             \   'head1': head1,
-            \   'tail1': s:added_tail(head1, tail1, is_linewise[0]),
+            \   'tail1': s:added_tail(head1, tail1, linewise[0]),
             \   'head2': head2,
-            \   'tail2': s:added_tail(head2, tail2, is_linewise[1]),
-            \   'linewise': is_linewise,
+            \   'tail2': s:added_tail(head2, tail2, linewise[1]),
+            \   'linewise': linewise,
             \ })
     endif
 
@@ -89,16 +102,16 @@ function! s:act.add_pair(buns, stuff, undojoin) dict abort "{{{
     if modmark.tail == s:null_pos
       let modmark.tail = mod_tail
     else
-      call s:shift_for_add(modmark.tail, target, a:buns, indent, is_linewise)
+      call s:shift_for_add(modmark.tail, target, a:buns, indent, linewise)
       if s:is_ahead(mod_tail, modmark.tail)
         let modmark.tail = mod_tail
       endif
     endif
 
     " update cursor positions
-    call s:shift_for_add(self.cursor.inner_head, target, a:buns, indent, is_linewise)
-    call s:shift_for_add(self.cursor.keep,       target, a:buns, indent, is_linewise)
-    call s:shift_for_add(self.cursor.inner_tail, target, a:buns, indent, is_linewise)
+    call s:shift_for_add(self.cursor.inner_head, target, a:buns, indent, linewise)
+    call s:shift_for_add(self.cursor.keep,       target, a:buns, indent, linewise)
+    call s:shift_for_add(self.cursor.inner_tail, target, a:buns, indent, linewise)
 
     " update next target positions
     let edges.head = copy(head1)
@@ -382,18 +395,13 @@ function! s:restore_indent(indentopt) abort  "{{{
   endif
 endfunction
 "}}}
-function! s:add_former(buns, pos, opt, ...) abort  "{{{
+function! s:add_former(buns, pos, linewise, opt, ...) abort  "{{{
   let undojoin_cmd = get(a:000, 0, 0) ? 'undojoin | ' : ''
   let pos = copy(a:pos)
-  let linewise  = a:opt.of('linewise')
+  let linewise  = a:linewise
   if linewise == 1 || linewise == 2 || (linewise == 3 && pos[1] == 1)
     let startinsert = a:opt.of('noremap') ? 'normal! O' : "normal \<Plug>(sandwich-O)"
     let linewise = 1
-  elseif linewise == 3
-    let prevline = pos[1] - 1
-    let pos = [0, prevline, col([prevline, '$']), 0]
-    let startinsert = a:opt.of('noremap') ? 'normal! i' : "normal \<Plug>(sandwich-i)"
-    let linewise = 0
   else
     let startinsert = a:opt.of('noremap') ? 'normal! i' : "normal \<Plug>(sandwich-i)"
     let linewise = 0
@@ -408,18 +416,13 @@ function! s:add_former(buns, pos, opt, ...) abort  "{{{
   return [linewise, indent.diff(a:buns[0]), getpos("'["), getpos("']")]
 endfunction
 "}}}
-function! s:add_latter(buns, pos, opt) abort  "{{{
+function! s:add_latter(buns, pos, linewise, opt) abort  "{{{
   let undojoin_cmd = ''
   let pos = copy(a:pos)
-  let linewise = a:opt.of('linewise')
+  let linewise = a:linewise
   if linewise == 1 || linewise == 2 || (linewise == 3 && pos[1] == line('$'))
     let startinsert = a:opt.of('noremap') ? 'normal! o' : "normal \<Plug>(sandwich-o)"
     let linewise = 1
-  elseif linewise == 3
-    let nextline = pos[1] + 1
-    let pos = [0, nextline, indent(nextline) + 1, 0]
-    let startinsert = a:opt.of('noremap') ? 'normal! i' : "normal \<Plug>(sandwich-i)"
-    let linewise = 0
   else
     let startinsert = a:opt.of('noremap') ? 'normal! i' : "normal \<Plug>(sandwich-i)"
     let linewise = 0
